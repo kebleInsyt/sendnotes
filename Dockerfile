@@ -14,11 +14,17 @@ RUN apt-get update && apt-get install -y \
 # Install Composer globally
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Set the working directory
+# Set the working directory to /var/www/html (where Apache serves files)
 WORKDIR /var/www/html
 
 # Copy the Laravel application code into the container
 COPY . .
+
+# Change Apache DocumentRoot to Laravel's public directory
+RUN sed -i 's|/var/www/html|/var/www/html/public|' /etc/apache2/sites-available/000-default.conf
+
+# Enable Apache rewrite module for Laravel routing
+RUN a2enmod rewrite
 
 # Set up permissions for storage and cache directories
 RUN chown -R www-data:www-data storage bootstrap/cache
