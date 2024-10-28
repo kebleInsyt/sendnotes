@@ -38,6 +38,13 @@ RUN composer install --no-dev --optimize-autoloader --verbose
 # Generate the .env file if it doesn't exist and set up the application key
 RUN cp .env.example .env && php artisan key:generate --ansi
 
+# Set ServerName to suppress warnings
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+# Set permissions for Laravel storage and cache
+RUN chmod -R 775 storage bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache
+
+
 # Expose port 80 to serve the application
 EXPOSE 80
 
