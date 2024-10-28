@@ -1,8 +1,12 @@
 # Use the official PHP image with Apache
 FROM php:8.1-apache
 
-# Install necessary PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql
+
+# Install necessary packages including PostgreSQL development libraries
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql
+
 
 # Copy the Laravel app to the /var/www/html directory
 COPY . /var/www/html
