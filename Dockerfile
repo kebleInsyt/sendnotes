@@ -5,6 +5,7 @@ FROM php:8.1-apache
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
+    libonig-dev \
     unzip \
     && docker-php-ext-install pdo pdo_pgsql zip bcmath mbstring
 
@@ -18,15 +19,7 @@ COPY . /var/www/html
 WORKDIR /var/www/html
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
-
-#set composers memory limit
 RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader
-
-
-#clear cache
-RUN composer clear-cache && composer install --no-dev --optimize-autoloader
-
 
 # Set permissions (adjust as needed)
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
