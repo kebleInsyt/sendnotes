@@ -44,12 +44,8 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # Set permissions for Laravel storage and cache
 RUN chmod -R 775 storage bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache
 
-
 # Expose port 80 to serve the application
 EXPOSE 80
 
-# Start Laravel migrations (remove if handled externally)
-RUN php artisan migrate --force
-
-# Run Apache in the foreground
-CMD ["apache2-foreground"]
+# Run migrations during container startup (not during build)
+CMD ["sh", "-c", "php artisan migrate --force && apache2-foreground"]
