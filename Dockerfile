@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     unzip \
     git \
+    curl \
+    npm \
     && docker-php-ext-install pdo pdo_pgsql zip bcmath mbstring \
     && apt-get clean
 
@@ -19,6 +21,15 @@ WORKDIR /var/www/html
 
 # Copy the Laravel application code into the container
 COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --verbose
+
+# Install Node dependencies
+RUN npm install
+
+# Build the assets with Vite
+RUN npm run build
 
 # Change Apache DocumentRoot to Laravel's public directory
 RUN sed -i 's|/var/www/html|/var/www/html/public|' /etc/apache2/sites-available/000-default.conf
@@ -32,9 +43,6 @@ RUN chown -R www-data:www-data storage bootstrap/cache
 # Set up environment variables for Composer
 ENV COMPOSER_MEMORY_LIMIT=-1
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --verbose
-
 # Generate the .env file if it doesn't exist and set up the application key
 RUN cp .env.example .env && php artisan key:generate --ansi
 
@@ -47,5 +55,5 @@ RUN chmod -R 775 storage bootstrap/cache && chown -R www-data:www-data storage b
 # Expose port 80 to serve the application
 EXPOSE 80
 
-# Run migrations during container startup (not during build)
+# Run migrations and start the server
 CMD ["sh", "-c", "php artisan migrate --force && apache2-foreground"]
