@@ -17,4 +17,9 @@ export default defineConfig({
         assetsDir: "",
         emptyOutDir: true,
     },
+    server: {
+        hmr: {
+            host: "localhost",
+        },
+    },
 });
