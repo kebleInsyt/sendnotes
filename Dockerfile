@@ -13,47 +13,53 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_pgsql zip bcmath mbstring \
     && apt-get clean
 
+# Install Node.js 18.x (or your preferred version)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
 # Install Composer globally
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Set the working directory to /var/www/html (where Apache serves files)
+# Set the working directory
 WORKDIR /var/www/html
 
-# Copy the Laravel application code into the container
+# Copy composer files first
+COPY composer.json composer.lock ./
+
+# Install composer dependencies
+RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Copy package.json and package-lock.json
+COPY package.json package-lock.json ./
+
+# Install npm dependencies
+RUN npm clean-install
+
+# Copy the rest of the application
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --verbose
+# Set up environment file
+RUN cp .env.example .env
+RUN php artisan key:generate --ansi
 
-# Install Node dependencies
-RUN npm install
-
-# Build the assets with Vite
+# Build assets with npm
 RUN npm run build
 
-# Change Apache DocumentRoot to Laravel's public directory
+# Verify the manifest file exists
+RUN test -f public/build/manifest.json || exit 1
+
+# Configure Apache
 RUN sed -i 's|/var/www/html|/var/www/html/public|' /etc/apache2/sites-available/000-default.conf
-
-# Enable Apache rewrite module for Laravel routing
 RUN a2enmod rewrite
-
-# Set up permissions for storage and cache directories
-RUN chown -R www-data:www-data storage bootstrap/cache
-
-# Set up environment variables for Composer
-ENV COMPOSER_MEMORY_LIMIT=-1
-
-# Generate the .env file if it doesn't exist and set up the application key
-RUN cp .env.example .env && php artisan key:generate --ansi
-
-# Set ServerName to suppress warnings
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Set permissions for Laravel storage and cache
-RUN chmod -R 775 storage bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache
+# Set proper permissions
+RUN chown -R www-data:www-data storage bootstrap/cache
+RUN chmod -R 775 storage bootstrap/cache
+RUN chown -R www-data:www-data public/build
 
-# Expose port 80 to serve the application
+# Expose port 80
 EXPOSE 80
 
-# Run migrations and start the server
+# Start Apache and run migrations
 CMD ["sh", "-c", "php artisan migrate --force && apache2-foreground"]
