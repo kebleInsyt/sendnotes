@@ -41,14 +41,13 @@ COPY . .
 RUN cp .env.example .env
 RUN php artisan key:generate --ansi
 
-# Ensure required directories exist and have correct permissions
+# Ensure required directories exist
 RUN mkdir -p public/build
 RUN mkdir -p resources/css resources/js
-RUN chown -R www-data:www-data public/build resources
 
 # Create basic app.js if it doesn't exist
 RUN if [ ! -f resources/js/app.js ]; then \
-    echo "import './bootstrap';" > resources/js/app.js; \
+    echo "import './bootstrap';\nimport '../css/app.css';" > resources/js/app.js; \
     fi
 
 # Create basic app.css if it doesn't exist
@@ -59,15 +58,21 @@ RUN if [ ! -f resources/css/app.css ]; then \
 # Build assets with detailed output
 RUN NODE_ENV=production npm run build
 
+# Move the manifest file to the correct location
+RUN if [ -f public/build/.vite/manifest.json ]; then \
+    cp public/build/.vite/manifest.json public/build/manifest.json; \
+    fi
+
 # Debug: Show build contents
 RUN echo "Build directory contents:" && ls -la public/build/
+RUN echo "Manifest contents:" && cat public/build/manifest.json || true
 
 # Configure Apache
 RUN sed -i 's|/var/www/html|/var/www/html/public|' /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Set final permissions
+# Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 RUN chmod -R 775 storage bootstrap/cache public/build
 
