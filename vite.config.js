@@ -21,7 +21,7 @@ export default defineConfig({
                 'resources/js/app.js'
             ]
         },
-        assetsDir: '',
+        assetsDir: 'assets',
         emptyOutDir: true,
     },
     server: {
