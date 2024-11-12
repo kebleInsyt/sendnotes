@@ -41,9 +41,10 @@ COPY . .
 RUN cp .env.example .env
 RUN php artisan key:generate --ansi
 
-# Ensure required directories exist
-RUN mkdir -p public/build
+# Ensure required directories exist with proper permissions
+RUN mkdir -p public/build/assets
 RUN mkdir -p resources/css resources/js
+RUN chmod -R 775 public/build
 
 # Create basic app.js if it doesn't exist
 RUN if [ ! -f resources/js/app.js ]; then \
@@ -55,16 +56,21 @@ RUN if [ ! -f resources/css/app.css ]; then \
     echo "@tailwind base;\n@tailwind components;\n@tailwind utilities;" > resources/css/app.css; \
     fi
 
+# Clear any existing build files
+RUN rm -rf public/build/*
+
 # Build assets with detailed output
 RUN NODE_ENV=production npm run build
 
-# Move the manifest file to the correct location
+# Ensure manifest exists and is in the correct location
 RUN if [ -f public/build/.vite/manifest.json ]; then \
+    mkdir -p public/build && \
     cp public/build/.vite/manifest.json public/build/manifest.json; \
     fi
 
 # Debug: Show build contents
 RUN echo "Build directory contents:" && ls -la public/build/
+RUN echo "Assets directory contents:" && ls -la public/build/assets/ || true
 RUN echo "Manifest contents:" && cat public/build/manifest.json || true
 
 # Configure Apache
